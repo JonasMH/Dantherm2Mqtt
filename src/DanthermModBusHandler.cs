@@ -255,8 +255,8 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Remaining Filter Hours",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_remaning_filter_hours",
+			Name = $"{deviceName} - Remaining Filter Days",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_remaning_filter_days",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
