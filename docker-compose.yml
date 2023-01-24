@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  dantherm2mqtt:
+    image: ${DOCKER_REGISTRY-}dantherm2mqtt
+    build:
+      context: .
+      dockerfile: src/Dockerfile

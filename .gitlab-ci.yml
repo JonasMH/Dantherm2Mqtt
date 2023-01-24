@@ -1,0 +1,33 @@
+image: mcr.microsoft.com/dotnet/sdk:6.0
+
+stages:
+  - build
+  - test
+  - archive
+
+.test:
+  stage: test
+  script:
+    - dotnet test --blame-hang-timeout 2m --logger "junit" $(find *.sln -print -quit)
+  artifacts:
+    when: always
+    paths:
+      - ./test/**/TestResults/
+    reports:
+      junit:
+        - ./test/**/TestResults/TestResults.xml
+
+archive image:
+  image: alpine:3.15
+  stage: archive
+  tags:
+    - all
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - apk update && apk add --no-cache docker-cli openrc git
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build --pull -f ./src/Dockerfile -t $CI_REGISTRY/$CI_PROJECT_PATH:latest .
+    - docker push $CI_REGISTRY/$CI_PROJECT_PATH:latest
+    - if [ $(git diff HEAD HEAD~1 --name-only | grep VERSION) ]; then docker tag $CI_REGISTRY/$CI_PROJECT_PATH:latest $CI_REGISTRY/$CI_PROJECT_PATH:$(cat VERSION); docker push $CI_REGISTRY/$CI_PROJECT_PATH:$(cat VERSION); fi

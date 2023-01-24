@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  dantherm2mqtt:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "80"
