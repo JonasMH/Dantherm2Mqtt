@@ -5,53 +5,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NodaTime;
 using NodaTime.Serialization.JsonNet;
-using Prometheus;
 using Microsoft.Extensions.Options;
 using ToMqttNet;
 using MQTTnet;
-
-public class DanthermToMqttMetrics
-{
-	private readonly MetricFactory _metricsFactory;
-	private readonly Gauge _lastActiveAlarm;
-	private readonly Counter _lastPull;
-
-	public DanthermToMqttMetrics(MetricFactory metricsFactory)
-	{
-		_metricsFactory = metricsFactory;
-
-		_lastActiveAlarm = _metricsFactory.CreateGauge("danthermtomqtt_last_active_alarm", "The last active alarm, zero = none, see Dantherm documentation if not zero", new GaugeConfiguration
-		{
-			LabelNames = new string[]
-			{
-				"device_serial"
-			}
-		});
-
-		_lastPull = _metricsFactory.CreateCounter("danthermtomqtt_last_data_pull_time", "The last time data either failed or pulled successfully", new CounterConfiguration
-		{
-			LabelNames = new string[]
-			{
-				"succeeded",
-				"device_serial"
-			}
-		});
-	}
-
-	public void UpdateMetrics(DanthermKind kind)
-	{
-		_lastActiveAlarm
-			.WithLabels(kind.Status.SerialNum.ToString())
-			.Set((int)kind.Status.LastActiveAlarm);
-	}
-
-	public void SetLastDataPull(DanthermKind kind, bool succeeded)
-	{
-		_lastPull
-			.WithLabels(succeeded.ToString(), kind.Status.SerialNum.ToString())
-			.IncToCurrentTimeUtc();
-	}
-}
+using Newtonsoft.Json.Serialization;
 
 
 public class DanthermModBusHandler : BackgroundService
@@ -62,6 +19,7 @@ public class DanthermModBusHandler : BackgroundService
 	private short _addressOffset = -1;
 	private ModbusTcpClient _modbusClient;
 	private DanthermKind _result;
+	private JsonSerializerSettings _jsonSettings;
 
 	public DanthermModBusHandler(
 		ILogger<DanthermModBusHandler> logger,
@@ -77,6 +35,18 @@ public class DanthermModBusHandler : BackgroundService
 		{
 			Spec = danthermOptions.Value
 		};
+
+		_jsonSettings = new JsonSerializerSettings
+		{
+			Formatting = Formatting.Indented,
+			ContractResolver = new DefaultContractResolver
+			{
+				NamingStrategy = new CamelCaseNamingStrategy()
+			}
+		};
+
+		_jsonSettings.Converters.Add(new StringEnumConverter());
+		_jsonSettings.ConfigureForNodaTime(DateTimeZoneProviders.Tzdb);
 	}
 
 	private async Task<byte[]> ReadHoldingRegistersAsync(ushort register, ushort points)
@@ -96,15 +66,7 @@ public class DanthermModBusHandler : BackgroundService
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		var jsonOptions = new JsonSerializerSettings
-		{
-			Formatting = Formatting.Indented,
-
-		};
-
-		jsonOptions.Converters.Add(new StringEnumConverter());
-		jsonOptions.ConfigureForNodaTime(DateTimeZoneProviders.Tzdb);
-
+		var hasPublishedDiscovery = false;
 		while (!stoppingToken.IsCancellationRequested)
 		{
 			try
@@ -153,11 +115,18 @@ public class DanthermModBusHandler : BackgroundService
 					await _mqtt.PublishAsync(
 						new MqttApplicationMessageBuilder()
 						.WithTopic($"{_mqtt.MqttOptions.NodeId}/status/{_result.Status.SerialNum}")
-						.WithPayload(JsonConvert.SerializeObject(_result, jsonOptions))
+						.WithPayload(JsonConvert.SerializeObject(_result, _jsonSettings))
 						.Build());
 
 					_metrics.UpdateMetrics(_result);
 					_metrics.SetLastDataPull(_result, true);
+
+					if(!hasPublishedDiscovery)
+					{
+						hasPublishedDiscovery = true;
+						await PublishDiscoveryDocuments();
+					}
+
 					await Task.Delay(TimeSpan.FromMilliseconds(_result.Spec.PollingIntervalMS));
 				}
 
@@ -169,5 +138,130 @@ public class DanthermModBusHandler : BackgroundService
 
 			await Task.Delay(TimeSpan.FromMilliseconds(_result.Spec.PollingIntervalMS));
 		}
+	}
+
+	private async Task PublishDiscoveryDocuments()
+	{
+		var deviceName = "Dantherm HCV400";
+		var availability = new List<MqttDiscoveryAvailablilty>{
+			new MqttDiscoveryAvailablilty()
+			{
+				Topic = $"{_mqtt.MqttOptions.NodeId}/connected",
+				PayloadAvailable = "2",
+				PayloadNotAvailable = "0"
+			}
+		};
+		var statusTopic = $"{_mqtt.MqttOptions.NodeId}/status/{_result.Status.SerialNum}";
+
+		var device = new MqttDiscoveryDevice
+		{
+			Name = deviceName,
+			Identifiers = new List<string>
+			{
+				_result.Status.SerialNum.ToString()
+			}
+		};
+
+
+		var namingStrat = ((DefaultContractResolver)_jsonSettings.ContractResolver!).NamingStrategy!;
+		var statusKey = namingStrat.GetPropertyName(nameof(DanthermKind.Status), false);
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Outdoor Temperature",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_outdoor_temp",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.OutdoorTemperatureC), false)} }}}}",
+			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Supply Temperature",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_supply_temp",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.SupplyTemperatureC), false)} }}}}",
+			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Extract Temperature",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_extract_temp",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExtractTemperatureC), false)} }}}}",
+			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Exhaust Temperature",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_exhaust_temp",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExhaustTemperatureC), false)} }}}}",
+			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Fan1 Speed",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan1_rpm",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan1Rpm), false)} }}}}",
+			UnitOfMeasurement = "rpm"
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Fan2 Speed",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan2_rpm",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan2Rpm), false)} }}}}",
+			UnitOfMeasurement = "rpm"
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Active Alarm",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_active_alarm",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.LastActiveAlarm), false)} }}}}"
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Work Hours",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_active_alarm",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.WorkTimeHours), false)} }}}}",
+			UnitOfMeasurement = HomeAssistantUnits.TIME_HOURS.Value
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Remaining Filter Hours",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_remaning_filter_hours",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.FilterRemaningTimeDays), false)} }}}}",
+			UnitOfMeasurement = HomeAssistantUnits.TIME_DAYS.Value
+		});
 	}
 }
