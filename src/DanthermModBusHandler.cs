@@ -173,7 +173,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.OutdoorTemperatureC), false)} }}}}",
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.OutdoorTemperatureC), false)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -184,7 +184,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.SupplyTemperatureC), false)} }}}}",
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.SupplyTemperatureC), false)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -195,7 +195,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExtractTemperatureC), false)} }}}}",
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExtractTemperatureC), false)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -206,7 +206,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExhaustTemperatureC), false)} }}}}",
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExhaustTemperatureC), false)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -217,7 +217,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan1Rpm), false)} }}}}",
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan1Rpm), false)} | round(0) }}}}",
 			UnitOfMeasurement = "rpm"
 		});
 
@@ -228,7 +228,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan2Rpm), false)} }}}}",
+			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan2Rpm), false)} | round(0) }}}}",
 			UnitOfMeasurement = "rpm"
 		});
 
@@ -245,7 +245,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"{deviceName} - Work Hours",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_active_alarm",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_work_hours",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
