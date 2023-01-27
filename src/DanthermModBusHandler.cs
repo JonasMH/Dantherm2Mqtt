@@ -9,7 +9,8 @@ using Microsoft.Extensions.Options;
 using ToMqttNet;
 using MQTTnet;
 using Newtonsoft.Json.Serialization;
-
+using System.Linq.Expressions;
+using System.Reflection;
 
 public class DanthermModBusHandler : BackgroundService
 {
@@ -162,10 +163,6 @@ public class DanthermModBusHandler : BackgroundService
 			}
 		};
 
-
-		var namingStrat = ((DefaultContractResolver)_jsonSettings.ContractResolver!).NamingStrategy!;
-		var statusKey = namingStrat.GetPropertyName(nameof(DanthermKind.Status), false);
-
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"{deviceName} - Outdoor Temperature",
@@ -173,7 +170,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.OutdoorTemperatureC), false)} | round(1) }}}}",
+			ValueTemplate = $"{{{{ {GetJsonSelector(x => x.OutdoorTemperatureC)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -184,7 +181,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.SupplyTemperatureC), false)} | round(1) }}}}",
+			ValueTemplate = $"{{{{ {GetJsonSelector(x => x.SupplyTemperatureC)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -195,7 +192,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExtractTemperatureC), false)} | round(1) }}}}",
+			ValueTemplate = $"{{{{ {GetJsonSelector(x => x.ExtractTemperatureC)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -206,7 +203,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.ExhaustTemperatureC), false)} | round(1) }}}}",
+			ValueTemplate = $"{{{{ {GetJsonSelector(x => x.ExhaustTemperatureC)} | round(1) }}}}",
 			UnitOfMeasurement = HomeAssistantUnits.TEMP_CELSIUS.Value
 		});
 
@@ -217,7 +214,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan1Rpm), false)} | round(0) }}}}",
+			ValueTemplate = $"{{{{ {GetJsonSelector(x => x.HALFan1Rpm)} | round(0) }}}}",
 			UnitOfMeasurement = "rpm"
 		});
 
@@ -228,7 +225,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.HALFan2Rpm), false)} | round(0) }}}}",
+			ValueTemplate = $"{{{{ {GetJsonSelector(x => x.HALFan2Rpm)} | round(0) }}}}",
 			UnitOfMeasurement = "rpm"
 		});
 
@@ -239,7 +236,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.LastActiveAlarm), false)} }}}}"
+			ValueTemplate = GetValueTemplate(x => x.LastActiveAlarm)
 		});
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
@@ -249,7 +246,7 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.WorkTimeHours), false)} }}}}",
+			ValueTemplate = GetValueTemplate(x => x.WorkTimeHours),
 			UnitOfMeasurement = HomeAssistantUnits.TIME_HOURS.Value
 		});
 
@@ -260,8 +257,43 @@ public class DanthermModBusHandler : BackgroundService
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			ValueTemplate = $"{{{{ value_json.{statusKey}.{namingStrat.GetPropertyName(nameof(DanthermUvcStatus.FilterRemaningTimeDays), false)} }}}}",
+			ValueTemplate = GetValueTemplate(x => x.FilterRemaningTimeDays),
 			UnitOfMeasurement = HomeAssistantUnits.TIME_DAYS.Value
 		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Current State",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_current_state",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = GetValueTemplate(x => x.CurrentBLState)
+		});
+	}
+
+	private string GetJsonSelector<T>(Expression<Func<DanthermUvcStatus, T>> selector)
+	{
+		MemberExpression member = selector.Body as MemberExpression;
+		if (member == null)
+			throw new ArgumentException(string.Format(
+				"Expression '{0}' refers to a method, not a property.",
+				selector.ToString()));
+
+		PropertyInfo propInfo = member.Member as PropertyInfo;
+		if (propInfo == null)
+			throw new ArgumentException(string.Format(
+				"Expression '{0}' refers to a field, not a property.",
+				selector.ToString()));
+
+
+		var namingStrat = ((DefaultContractResolver)_jsonSettings.ContractResolver!).NamingStrategy!;
+		var statusKey = namingStrat.GetPropertyName(nameof(DanthermKind.Status), false);
+		return $"value_json.{statusKey}.{namingStrat.GetPropertyName(propInfo.Name, false)}";
+	}
+
+	private string GetValueTemplate<T>(Expression<Func<DanthermUvcStatus, T>> selector)
+	{
+		return $"{{{{ {GetJsonSelector(selector)} }}}}";
 	}
 }
