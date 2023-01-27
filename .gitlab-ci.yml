@@ -36,5 +36,7 @@ archive image:
         docker tag $CI_REGISTRY/$CI_PROJECT_PATH:latest $CI_REGISTRY/$CI_PROJECT_PATH:$(cat VERSION);
         docker push $CI_REGISTRY/$CI_PROJECT_PATH:$(cat VERSION);
         docker tag $CI_REGISTRY/$CI_PROJECT_PATH:latest jonasmh/dantherm2mqtt:$(cat VERSION);
+        docker tag $CI_REGISTRY/$CI_PROJECT_PATH:latest jonasmh/dantherm2mqtt:latest;
         docker push jonasmh/dantherm2mqtt:$(cat VERSION);
+        docker push jonasmh/dantherm2mqtt:latest;
       fi
