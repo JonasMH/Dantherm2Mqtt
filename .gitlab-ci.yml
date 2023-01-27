@@ -27,7 +27,7 @@ archive image:
   before_script:
     - apk update && apk add --no-cache docker-cli openrc git
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker login -u $DOCKER_HUB_REGISTRY_USER -p DOCKER_HUB_REGISTRY_PASSWORD
+    - docker login -u $DOCKER_HUB_REGISTRY_USER -p $DOCKER_HUB_REGISTRY_PASSWORD
   script:
     - docker build --pull -f ./src/Dockerfile -t $CI_REGISTRY/$CI_PROJECT_PATH:latest .
     - docker push $CI_REGISTRY/$CI_PROJECT_PATH:latest
