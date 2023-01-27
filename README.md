@@ -102,7 +102,7 @@ services:
 | `DanthermUvcSpec.Address`           | `DanthermUvcSpec__Address`,           | IP of the UVC Controller            | `192.168.1.42` | `null`        |
 | `DanthermUvcSpec.Port`              | `DanthermUvcSpec__Port`,              | Modbus port on the UVC Controller   | `502`          | `502`         |
 | `DanthermUvcSpec.SlaveAddress`      | `DanthermUvcSpec__SlaveAddress`,      | Slave address of the UVC Controller | `1`            | `1`           |
-| `DanthermUvcSpec.PollingIntervalMS` | `DanthermUvcSpec__PollingIntervalMS`, | Polling interval in ms              | `10000`        | `10000` (10s) |
+| `DanthermUvcSpec.PollingIntervalMS` | `DanthermUvcSpec__PollingIntervalMS`, | Polling interval in ms              | `30000`        | `30000` (30s) |
 
 It uses the library [JonasMH/ToMqttNet](https://github.com/JonasMH/ToMqttNet) to MQTT, Home Assistant Discovery and more, so some MQTT related options are inherited from there:
 
