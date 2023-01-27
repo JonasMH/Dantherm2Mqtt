@@ -6,7 +6,7 @@ This program connects to a Dantherm UVC Controller (Currently only tested with a
 
 ### Publish current state to MQTT
 
-Example value posted to the state topic:
+Example value posted to the state topic (By default `dantherm/status/<device-serial>`):
 
 ```json
 {
@@ -78,7 +78,22 @@ It has a prometheus metrics endpoint at `/metrics` with the following metrics re
 
 ## How to deploy
 
-The application is distributed using a docker image available at
+The application is distributed using a docker image available at [jonasmh/dantherm2mqtt](https://hub.docker.com/r/jonasmh/dantherm2mqtt)
+
+### Docker Compose
+
+Example docker-compose:
+
+```yaml
+version: "3.4"
+
+services:
+  dantherm2mqtt:
+    image: jonasmh/dantherm2mqtt:latest
+    environment:
+      - DanthermUvcSpec__Address=192.168.0.42
+      - MqttConnectionOptions__Server=192.168.0.30
+```
 
 ### Configuration
 
