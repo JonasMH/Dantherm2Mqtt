@@ -18,6 +18,7 @@ builder.Host.UseSerilog((options, loggerConf) =>
 
 services.AddHealthChecks();
 services.AddHostedService<DanthermModBusHandler>();
+services.AddSingleton<DanthermTopicHelper>();
 services.AddMqttConnection(options =>
 {
 	options.NodeId = "dantherm";

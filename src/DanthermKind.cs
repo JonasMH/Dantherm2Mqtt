@@ -39,6 +39,18 @@ public class DanthermUvcStatus
     public DanthermUvcAlarm LastActiveAlarm { get; set; }
     public float HALFan1Rpm { get; set; }
     public float HALFan2Rpm { get; set; }
+    public uint? VolatileOrganicCompounds { get; set; }
+    public uint? RelativeHumidity { get; set; }
+    public DanthermUvcBypassState? BypassState { get; set; }
+}
+
+public enum DanthermUvcBypassState
+{
+    Closed = 0x0000,
+    InProcess = 0x0001,
+    Closing = 0x0020,
+    Opening = 0x0040,
+    Opened = 0x00FF
 }
 
 public enum DanthermUvcAlarm
@@ -80,6 +92,24 @@ public enum DanthermUvcModeOfOperation
     Defrost = 15,
     NightMode = 16
 }
+
+public enum DanthermUvcSetModeOfOperation
+{
+    Demand = 0x0002,
+    Manual = 0x0004,
+    WeekProgram = 0x0008,
+
+    StartAway = 0x0010,
+    EndAway = 0x8010,
+
+    StartFireplace = 0x0040,
+    EndFireplace = 0x8040,
+
+    StartSummer = 0x0800,
+    EndSummer = 0x8800,
+}
+
+
 public class DanthermUvcFwVersion
 {
     public byte Major { get; set; }
@@ -118,7 +148,7 @@ public class DanthermUvcSystemId
     public static DanthermUvcSystemId Parse(byte[] input)
     {
         var result = new DanthermUvcSystemId();
-        var components = (input[3] << 8) + input[2];
+        var components = (input[0] << 8) + input[1];
 
         result.FP1 = ((components >> 0) & 0x01) == 1;
         result.Week = ((components >> 1) & 0x01) == 1;
@@ -136,7 +166,7 @@ public class DanthermUvcSystemId
         result.DI1Override = ((components >> 13) & 0x01) == 1;
         result.DI2Override = ((components >> 14) & 0x01) == 1;
 
-        result.UnitType = (DanthermUvcUnitType)input[0];
+        result.UnitType = (DanthermUvcUnitType)input[3];
 
         return result;
     }
