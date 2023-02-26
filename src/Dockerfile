@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-preview-jammy-chiseled AS base
 WORKDIR /app
 EXPOSE 80
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-preview-jammy AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-preview AS build
 WORKDIR /src
 COPY ["src/Dantherm2Mqtt.csproj", "src/"]
 RUN dotnet restore "src/Dantherm2Mqtt.csproj"
