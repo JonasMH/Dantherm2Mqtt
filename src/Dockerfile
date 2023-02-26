@@ -1,21 +1,17 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-preview-jammy-chiseled AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-preview-jammy AS base
 WORKDIR /app
-EXPOSE 80
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-preview-jammy AS build
 WORKDIR /src
 COPY ["src/Dantherm2Mqtt.csproj", "src/"]
-RUN dotnet restore "src/Dantherm2Mqtt.csproj"
+RUN dotnet restore --use-current-runtime "src/Dantherm2Mqtt.csproj"
 COPY . .
 WORKDIR "/src/src"
-RUN dotnet build "Dantherm2Mqtt.csproj" -c Release -o /app/build
+RUN dotnet publish "Dantherm2Mqtt.csproj" -c Release -o /app/publish --use-current-runtime --self-contained false --no-restore
 
-FROM build AS publish
-RUN dotnet publish "Dantherm2Mqtt.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-preview-jammy-chiseled AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Dantherm2Mqtt.dll"]
