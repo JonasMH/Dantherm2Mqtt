@@ -1,0 +1,14 @@
+version: '3.4'
+
+services:
+  dantherm2mqtt:
+    image: ${DOCKER_REGISTRY-}dantherm2mqtt
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+      
+  mosquitto:
+    image: eclipse-mosquitto
+    volumes:
+      - ./mqtt-config:/mosquitto/config
+      - /etc/localtime:/etc/localtime:ro
