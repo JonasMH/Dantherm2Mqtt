@@ -39,23 +39,51 @@ public interface IModbusClientFactory
 
 public interface IModbusClient
 {
+	Task<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count, CancellationToken cancellationToken = default);
+	Task WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, byte[] dataset, CancellationToken cancellationToken = default);
+	void Connect(IPEndPoint remoteEndpoint, ModbusEndianness endianness);
+}
 
+public class ModbusClientBinding : IModbusClient
+{
+	private ModbusTcpClient _modbusClient;
+
+	public ModbusClientBinding()
+	{
+		_modbusClient = new ModbusTcpClient();
+	}
+
+	public Task<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count, CancellationToken cancellationToken)
+	{
+		return _modbusClient.ReadHoldingRegistersAsync<byte>(unitIdentifier, startingAddress, count, cancellationToken);
+	}
+
+	public Task WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, byte[] dataset, CancellationToken cancellationToken = default)
+	{
+		return _modbusClient.WriteMultipleRegistersAsync(unitIdentifier, startingAddress, dataset, cancellationToken);
+	}
+
+	public void Connect(IPEndPoint remoteEndpoint, ModbusEndianness endianness)
+	{
+		_modbusClient.Connect(remoteEndpoint, endianness);
+	}
 }
 
 public class DanthermModBusHandler : BackgroundService
 {
 	private readonly ILogger<DanthermModBusHandler> _logger;
-	private readonly DanthermToMqttMetrics _metrics;
+	private readonly IDanthermToMqttMetrics? _metrics;
 	private readonly IMqttConnectionService _mqtt;
 	private readonly DanthermTopicHelper _topicHelper;
 	private short _addressOffset = -1;
-	private ModbusTcpClient _modbusClient;
+	private IModbusClient _modbusClient;
 	private DanthermKind _result;
 	private JsonSerializerSettings _jsonSettings;
 
 	public DanthermModBusHandler(
 		ILogger<DanthermModBusHandler> logger,
-		DanthermToMqttMetrics metrics,
+		IDanthermToMqttMetrics? metrics,
+		IModbusClient modBusClient,
 		IOptions<DanthermUvcSpec> danthermOptions,
 		IMqttConnectionService mqtt,
 		DanthermTopicHelper topicHelper)
@@ -64,7 +92,7 @@ public class DanthermModBusHandler : BackgroundService
 		_metrics = metrics;
 		_mqtt = mqtt;
 		_topicHelper = topicHelper;
-		_modbusClient = new ModbusTcpClient();
+		_modbusClient = modBusClient;
 		_result = new DanthermKind()
 		{
 			Spec = danthermOptions.Value
@@ -84,7 +112,7 @@ public class DanthermModBusHandler : BackgroundService
 		_jsonSettings.ConfigureForNodaTime(DateTimeZoneProviders.Tzdb);
 	}
 
-	private async Task<byte[]> ReadHoldingRegistersAsync(ushort register, ushort points)
+	public async Task<byte[]> ReadHoldingRegistersAsync(ushort register, ushort points)
 	{
 		// The address offset of -1 is needed because something about 'PLC Addresses (Base 1)' (See docs)
 		var data = (await _modbusClient.ReadHoldingRegistersAsync(_result.Spec.SlaveAddress, (ushort)(register + _addressOffset), points)).ToArray();
@@ -100,7 +128,7 @@ public class DanthermModBusHandler : BackgroundService
 		return result;
 	}
 
-	private async Task WriteHolderRegistersAsync(ushort register, byte[] data)
+	public async Task WriteHoldingRegistersAsync(ushort register, byte[] data)
 	{
 		var flippedData = new byte[data.Length];
 		for (int i = 0; i < data.Length; i += 2)
@@ -109,7 +137,7 @@ public class DanthermModBusHandler : BackgroundService
 			flippedData[i + 1] = data[i];
 		}
 
-		await _modbusClient.WriteMultipleRegistersAsync(_result.Spec.SlaveAddress, (ushort)(register + _addressOffset), data);
+		await _modbusClient.WriteMultipleRegistersAsync(_result.Spec.SlaveAddress, (ushort)(register + _addressOffset), flippedData);
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -136,8 +164,8 @@ public class DanthermModBusHandler : BackgroundService
 						.WithPayload(JsonConvert.SerializeObject(_result, _jsonSettings))
 						.Build());
 
-					_metrics.UpdateMetrics(_result);
-					_metrics.SetLastDataPull(_result, true);
+					_metrics?.UpdateMetrics(_result);
+					_metrics?.SetLastDataPull(_result, true);
 
 					// Only publish the discovery document after the first values have been published
 					if(!hasPublishedDiscovery)
@@ -152,7 +180,7 @@ public class DanthermModBusHandler : BackgroundService
 
 			} catch(Exception ex)
 			{
-				_metrics.SetLastDataPull(_result, false);
+				_metrics?.SetLastDataPull(_result, false);
 				_logger.LogError(ex, "Failed to read from modbus device");
 			}
 
@@ -179,7 +207,7 @@ public class DanthermModBusHandler : BackgroundService
 			{
 				_logger.LogInformation("Received set mode of operation command with payload {payload}", payload);
 				var modeOfOperation = Enum.Parse<DanthermUvcSetModeOfOperation>(payload);
-				await WriteHolderRegistersAsync(169, BitConverter.GetBytes((uint)modeOfOperation));
+				await WriteHoldingRegistersAsync(169, BitConverter.GetBytes((uint)modeOfOperation));
 			}
 		} catch (Exception e)
 		{
@@ -388,18 +416,20 @@ public class DanthermModBusHandler : BackgroundService
 
 	private string GetJsonSelector<T>(Expression<Func<DanthermUvcStatus, T>> selector)
 	{
-		MemberExpression member = selector.Body as MemberExpression;
-		if (member == null)
+		if (selector.Body is not MemberExpression member)
+		{
 			throw new ArgumentException(string.Format(
 				"Expression '{0}' refers to a method, not a property.",
 				selector.ToString()));
+		}
 
-		PropertyInfo propInfo = member.Member as PropertyInfo;
+		PropertyInfo? propInfo = member.Member as PropertyInfo;
 		if (propInfo == null)
+		{
 			throw new ArgumentException(string.Format(
 				"Expression '{0}' refers to a field, not a property.",
 				selector.ToString()));
-
+		}
 
 		var namingStrat = ((DefaultContractResolver)_jsonSettings.ContractResolver!).NamingStrategy!;
 		var statusKey = namingStrat.GetPropertyName(nameof(DanthermKind.Status), false);

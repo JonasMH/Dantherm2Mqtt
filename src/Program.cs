@@ -42,7 +42,8 @@ services.AddSingleton<MetricFactory>(x =>
 	return factory;
 });
 
-services.AddSingleton<DanthermToMqttMetrics>();
+services.AddSingleton<IDanthermToMqttMetrics, DanthermToMqttMetrics>();
+services.AddSingleton<IModbusClient, ModbusClientBinding>();
 services.AddOptions<DanthermUvcSpec>()
 	.BindConfiguration(nameof(DanthermUvcSpec));
 

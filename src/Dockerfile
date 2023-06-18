@@ -5,7 +5,7 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0-preview-jammy AS build
 WORKDIR /src
-COPY ["src/Dantherm2Mqtt.csproj", "src/"]
+COPY ["src/*.csproj", "src/"]
 RUN dotnet restore --use-current-runtime "src/Dantherm2Mqtt.csproj"
 COPY . .
 WORKDIR "/src/src"

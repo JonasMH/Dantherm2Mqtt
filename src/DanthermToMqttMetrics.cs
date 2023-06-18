@@ -1,6 +1,6 @@
 ﻿using Prometheus;
 
-public class DanthermToMqttMetrics
+public class DanthermToMqttMetrics : IDanthermToMqttMetrics
 {
 	private readonly MetricFactory _metricsFactory;
 	private readonly Gauge _lastActiveAlarm;
