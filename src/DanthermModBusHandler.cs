@@ -11,6 +11,8 @@ using MQTTnet;
 using Newtonsoft.Json.Serialization;
 using System.Linq.Expressions;
 using System.Reflection;
+using MQTTnet.Packets;
+using MQTTnet.Client;
 
 public class DanthermTopicHelper
 {
@@ -55,7 +57,10 @@ public class ModbusClientBinding : IModbusClient
 
 	public Task<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count, CancellationToken cancellationToken)
 	{
-		return _modbusClient.ReadHoldingRegistersAsync<byte>(unitIdentifier, startingAddress, count, cancellationToken);
+		// The * 2 is to convert points => bytes
+		// According to fluentmodbus docs, it takes point (2 bytes) count as an arguments
+		// But then it's not returning enough bytes
+		return _modbusClient.ReadHoldingRegistersAsync<byte>(unitIdentifier, startingAddress, count * 2, cancellationToken);
 	}
 
 	public Task WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, byte[] dataset, CancellationToken cancellationToken = default)
@@ -218,7 +223,7 @@ public class DanthermModBusHandler : BackgroundService
 	private async Task ReadStaticValuesAsync()
 	{
 		_logger.LogInformation("Reading static values");
-		_result.Status.SystemId = DanthermUvcSystemId.Parse(await ReadHoldingRegistersAsync(3, 4));
+		_result.Status.SystemId = DanthermUvcSystemId.Parse(await ReadHoldingRegistersAsync(3, 2));
 		_result.Status.SystemName = Encoding.ASCII.GetString(await ReadHoldingRegistersAsync(9, 8));
 		_result.Status.SerialNum = BitConverter.ToUInt64(await ReadHoldingRegistersAsync(5, 4));
 		_result.Status.FWVersion = DanthermUvcFwVersion.Parse(await ReadHoldingRegistersAsync(25, 2));
@@ -399,7 +404,17 @@ public class DanthermModBusHandler : BackgroundService
 			ValueTemplate = GetValueTemplate(x => x.CurrentBLState)
 		});
 
-		if(_result.Status.SystemId.RHSensor)
+		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Bypass Active",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_bypass_state",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			ValueTemplate = GetValueTemplate(x => x.BypassState)
+		});
+
+		if (_result.Status.SystemId.RHSensor)
 		{
 			await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 			{
