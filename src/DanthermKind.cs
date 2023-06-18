@@ -187,7 +187,7 @@ public class DanthermUvcSystemId
 			result.UnitType = (DanthermUvcUnitType)input[3];
 		} catch (Exception e)
         {
-            throw new DanthermException($"Failed to parse DanthermUvcSystemId Data:${Convert.ToHexString(input)}", e);
+            throw new DanthermException($"Failed to parse DanthermUvcSystemId Data:{Convert.ToHexString(input)}", e);
         }
 
         return result;
