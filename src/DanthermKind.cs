@@ -42,6 +42,7 @@ public class DanthermUvcStatus
     public uint? VolatileOrganicCompounds { get; set; }
     public uint? RelativeHumidity { get; set; }
     public DanthermUvcBypassState? BypassState { get; set; }
+	public uint FanSpeedLevel { get; set; }
 }
 
 public enum DanthermUvcBypassState
@@ -107,8 +108,10 @@ public enum DanthermUvcSetModeOfOperation
 
     StartSummer = 0x0800,
     EndSummer = 0x8800,
-}
 
+	StartManualBypass = 0x0080,
+	EndManualBypass = 0x8080,
+}
 
 public class DanthermUvcFwVersion
 {

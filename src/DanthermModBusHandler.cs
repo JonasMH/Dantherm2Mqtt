@@ -14,66 +14,6 @@ using System.Reflection;
 using MQTTnet.Packets;
 using MQTTnet.Client;
 
-public class DanthermTopicHelper
-{
-	private readonly IMqttConnectionService _mqtt;
-
-	public DanthermTopicHelper(IMqttConnectionService mqtt)
-	{
-		_mqtt = mqtt;
-	}
-
-	public string GetStatusTopic(ulong serialNum)
-	{
-		return $"{_mqtt.MqttOptions.NodeId}/status/{serialNum}";
-	}
-
-	public string GetSetUnitModeTopic(ulong serialNum)
-	{
-		return $"{_mqtt.MqttOptions.NodeId}/write/{serialNum}/activeMode";
-	}
-}
-
-public interface IModbusClientFactory
-{
-
-}
-
-public interface IModbusClient
-{
-	Task<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count, CancellationToken cancellationToken = default);
-	Task WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, byte[] dataset, CancellationToken cancellationToken = default);
-	void Connect(IPEndPoint remoteEndpoint, ModbusEndianness endianness);
-}
-
-public class ModbusClientBinding : IModbusClient
-{
-	private ModbusTcpClient _modbusClient;
-
-	public ModbusClientBinding()
-	{
-		_modbusClient = new ModbusTcpClient();
-	}
-
-	public Task<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count, CancellationToken cancellationToken)
-	{
-		// The * 2 is to convert points => bytes
-		// According to fluentmodbus docs, it takes point (2 bytes) count as an arguments
-		// But then it's not returning enough bytes
-		return _modbusClient.ReadHoldingRegistersAsync<byte>(unitIdentifier, startingAddress, count * 2, cancellationToken);
-	}
-
-	public Task WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, byte[] dataset, CancellationToken cancellationToken = default)
-	{
-		return _modbusClient.WriteMultipleRegistersAsync(unitIdentifier, startingAddress, dataset, cancellationToken);
-	}
-
-	public void Connect(IPEndPoint remoteEndpoint, ModbusEndianness endianness)
-	{
-		_modbusClient.Connect(remoteEndpoint, endianness);
-	}
-}
-
 public class DanthermModBusHandler : BackgroundService
 {
 	private readonly ILogger<DanthermModBusHandler> _logger;
@@ -197,8 +137,8 @@ public class DanthermModBusHandler : BackgroundService
 	{
 		await _mqtt.SubscribeAsync(new MqttTopicFilter()
 		{
-			Topic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum)
-		});
+			Topic = _topicHelper.GetSetTopicRegex(_result.Status.SerialNum)
+		}, );
 
 		_mqtt.OnApplicationMessageReceived += async (sender, e) => await HandleMessageAsync(sender, e);
 	}
@@ -213,6 +153,19 @@ public class DanthermModBusHandler : BackgroundService
 				_logger.LogInformation("Received set mode of operation command with payload {payload}", payload);
 				var modeOfOperation = Enum.Parse<DanthermUvcSetModeOfOperation>(payload);
 				await WriteHoldingRegistersAsync(169, BitConverter.GetBytes((uint)modeOfOperation));
+			}
+
+			if (evnt.ApplicationMessage.Topic == _topicHelper.GetSetFanSpeedLevel(_result.Status.SerialNum))
+			{
+				_logger.LogInformation("Received set fan speed level command with payload {payload}", payload);
+				var speedLevel = int.Parse(payload);
+
+				if(speedLevel < 0 || speedLevel > 4)
+				{
+					throw new DanthermException("Fan Speed Level must be Min: 0, Max: 4, was " + speedLevel);
+				}
+
+				await WriteHoldingRegistersAsync(325, BitConverter.GetBytes((uint)speedLevel));
 			}
 		} catch (Exception e)
 		{
@@ -257,8 +210,9 @@ public class DanthermModBusHandler : BackgroundService
 		_result.Status.LastActiveAlarm = (DanthermUvcAlarm)(await ReadHoldingRegistersAsync(517, 2))[0];
 		_result.Status.HALFan1Rpm = BitConverter.ToSingle(await ReadHoldingRegistersAsync(101, 2));
 		_result.Status.HALFan2Rpm = BitConverter.ToSingle(await ReadHoldingRegistersAsync(103, 2));
+		_result.Status.FanSpeedLevel = BitConverter.ToUInt32(await ReadHoldingRegistersAsync(325, 2));
 
-		if(_result.Status.SystemId.VOCSensor)
+		if (_result.Status.SystemId.VOCSensor)
 		{
 			_result.Status.VolatileOrganicCompounds = BitConverter.ToUInt32(await ReadHoldingRegistersAsync(431, 2));
 		}
@@ -412,6 +366,45 @@ public class DanthermModBusHandler : BackgroundService
 			Device = device,
 			StateTopic = statusTopic,
 			ValueTemplate = GetValueTemplate(x => x.BypassState)
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttSelectDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Fan Speed Level",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan_speed_level",
+			Availability = availability,
+			Device = device,
+			StateTopic = statusTopic,
+			CommandTopic = _topicHelper.GetSetFanSpeedLevel(_result.Status.SerialNum),
+			ValueTemplate = GetValueTemplate(x => x.FanSpeedLevel),
+			Options =
+			{
+				"0",
+				"1",
+				"2",
+				"3",
+				"4",
+			}
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Start manual bypass",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_start_manual_bypass",
+			Availability = availability,
+			Device = device,
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.StartManualBypass)
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
+		{
+			Name = $"{deviceName} - End manual bypass",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_end_manual_bypass",
+			Availability = availability,
+			Device = device,
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.EndManualBypass)
 		});
 
 		if (_result.Status.SystemId.RHSensor)
