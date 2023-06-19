@@ -377,7 +377,7 @@ public class DanthermModBusHandler : BackgroundService
 			StateTopic = statusTopic,
 			CommandTopic = _topicHelper.GetSetFanSpeedLevel(_result.Status.SerialNum),
 			ValueTemplate = GetValueTemplate(x => x.FanSpeedLevel),
-			Options =
+			Options = new List<string>
 			{
 				"0",
 				"1",
@@ -405,6 +405,36 @@ public class DanthermModBusHandler : BackgroundService
 			Device = device,
 			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
 			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.EndManualBypass)
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Demand Mode",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_demand_mode",
+			Availability = availability,
+			Device = device,
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.Demand)
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Manual Mode",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_manual_mode",
+			Availability = availability,
+			Device = device,
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.Manual)
+		});
+
+		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
+		{
+			Name = $"{deviceName} - Week Program Mode",
+			UniqueId = $"dantherm_{_result.Status.SerialNum}_week_program_mode",
+			Availability = availability,
+			Device = device,
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.WeekProgram)
 		});
 
 		if (_result.Status.SystemId.RHSensor)
