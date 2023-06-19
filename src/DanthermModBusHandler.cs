@@ -138,7 +138,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.SubscribeAsync(new MqttTopicFilter()
 		{
 			Topic = _topicHelper.GetSetTopicRegex(_result.Status.SerialNum)
-		}, );
+		});
 
 		_mqtt.OnApplicationMessageReceived += async (sender, e) => await HandleMessageAsync(sender, e);
 	}
