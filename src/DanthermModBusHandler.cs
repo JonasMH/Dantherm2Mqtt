@@ -252,7 +252,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Outdoor Temperature",
+			Name = $"Outdoor Temperature",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_outdoor_temp",
 			Availability = availability,
 			Device = device,
@@ -263,7 +263,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Supply Temperature",
+			Name = $"Supply Temperature",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_supply_temp",
 			Availability = availability,
 			Device = device,
@@ -274,7 +274,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Extract Temperature",
+			Name = $"Extract Temperature",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_extract_temp",
 			Availability = availability,
 			Device = device,
@@ -285,7 +285,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Exhaust Temperature",
+			Name = $"Exhaust Temperature",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_exhaust_temp",
 			Availability = availability,
 			Device = device,
@@ -296,7 +296,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Fan1 Speed",
+			Name = $"Fan1 Speed",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan1_rpm",
 			Availability = availability,
 			Device = device,
@@ -307,7 +307,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Fan2 Speed",
+			Name = $"Fan2 Speed",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan2_rpm",
 			Availability = availability,
 			Device = device,
@@ -318,7 +318,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Active Alarm",
+			Name = $"Active Alarm",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_active_alarm",
 			Availability = availability,
 			Device = device,
@@ -328,7 +328,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Work Hours",
+			Name = $"Work Hours",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_work_hours",
 			Availability = availability,
 			Device = device,
@@ -339,7 +339,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Remaining Filter Days",
+			Name = $"Remaining Filter Days",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_remaning_filter_days",
 			Availability = availability,
 			Device = device,
@@ -350,7 +350,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Current State",
+			Name = $"Current State",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_current_state",
 			Availability = availability,
 			Device = device,
@@ -360,7 +360,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Bypass Active",
+			Name = $"Bypass Active",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_bypass_state",
 			Availability = availability,
 			Device = device,
@@ -370,7 +370,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSelectDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Fan Speed Level",
+			Name = $"Fan Speed Level",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan_speed_level",
 			Availability = availability,
 			Device = device,
@@ -389,7 +389,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Start manual bypass",
+			Name = $"Start manual bypass",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_start_manual_bypass",
 			Availability = availability,
 			Device = device,
@@ -399,7 +399,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
-			Name = $"{deviceName} - End manual bypass",
+			Name = $"End manual bypass",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_end_manual_bypass",
 			Availability = availability,
 			Device = device,
@@ -409,7 +409,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Demand Mode",
+			Name = $"Demand Mode",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_demand_mode",
 			Availability = availability,
 			Device = device,
@@ -419,7 +419,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Manual Mode",
+			Name = $"Manual Mode",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_manual_mode",
 			Availability = availability,
 			Device = device,
@@ -429,7 +429,7 @@ public class DanthermModBusHandler : BackgroundService
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
-			Name = $"{deviceName} - Week Program Mode",
+			Name = $"Week Program Mode",
 			UniqueId = $"dantherm_{_result.Status.SerialNum}_week_program_mode",
 			Availability = availability,
 			Device = device,
@@ -441,7 +441,7 @@ public class DanthermModBusHandler : BackgroundService
 		{
 			await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 			{
-				Name = $"{deviceName} - Relative Humidity",
+				Name = $"Relative Humidity",
 				UniqueId = $"dantherm_{_result.Status.SerialNum}_relative_humidity",
 				Availability = availability,
 				Device = device,
