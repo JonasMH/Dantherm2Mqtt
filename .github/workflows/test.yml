@@ -7,8 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/dotnet/sdk:8.0-preview
     steps:
-      - name: LS
-        run: ls -alt
-
+      - name: Check out the repo
+        uses: actions/checkout@v3
       - name: Run tests
         run: dotnet test --blame-hang-timeout 2m --logger "junit" $(find *.sln -print -quit)
