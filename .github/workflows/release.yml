@@ -1,11 +1,8 @@
 name: release
 
 on:
-  push:
-    paths:
-      - VERSION
-    branches:
-      - main
+  release:
+    types: [released]
 
 jobs:
   test:
@@ -27,10 +24,10 @@ jobs:
       - name: Install deps
         run: apk update && apk add --no-cache docker-cli openrc git
       - name: Login to Docker Hub
-        run: docker login -u $DOCKER_HUB_REGISTRY_USER -p $DOCKER_HUB_REGISTRY_PASSWORD
+        run: docker login -u ${{secrets.DOCKER_HUB_REGISTRY_USER}} -p ${{secrets.DOCKER_HUB_REGISTRY_PASSWORD}}
       - name: Build image
-        run: docker build --pull -f ./src/Dockerfile -t jonasmh/dantherm2mqtt:$(cat VERSION) -t jonasmh/dantherm2mqtt:latest .
+        run: docker build --pull -f ./src/Dockerfile -t jonasmh/dantherm2mqtt:${GITHUB_REF#refs/*/v} -t jonasmh/dantherm2mqtt:latest .
       - name: Push image
         run: |-
-          docker push jonasmh/dantherm2mqtt:$(cat VERSION);
+          docker push jonasmh/dantherm2mqtt:${GITHUB_REF#refs/*/v};
           docker push jonasmh/dantherm2mqtt:latest;
