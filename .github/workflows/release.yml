@@ -15,7 +15,7 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v3
       - name: Run tests
-        run: dotnet test --blame-hang-timeout 2m --logger "junit" $(find *.sln -print -quit)
+        run: dotnet test --blame-hang-timeout 2m $(find *.sln -print -quit)
 
   release:
     runs-on: ubuntu-latest
