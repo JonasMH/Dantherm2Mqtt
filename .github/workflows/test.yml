@@ -1,0 +1,11 @@
+name: test
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:8.0-preview
+    steps:
+      - name: Run tests
+        run: dotnet test --blame-hang-timeout 2m --logger "junit" $(find *.sln -print -quit)
