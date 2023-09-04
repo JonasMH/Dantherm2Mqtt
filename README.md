@@ -15,48 +15,51 @@ Example value posted to the state topic (By default `dantherm/status/<device-ser
     "address": "192.168.0.21",
     "port": 502,
     "slaveAddress": 1,
-    "pollingIntervalMS": 10000
+    "pollingIntervalMS": 30000
   },
   "status": {
     "macAddress": "FF:FF:FF:FF:FF:FF",
-    "serialNum": 1234567890,
+    "serialNum": 123456789,
     "systemName": "Ventilation unit",
     "fwVersion": {
       "major": 2,
       "minor": 95
     },
     "systemId": {
-      "fP1": false,
+      "fP1": true,
       "week": false,
-      "bypass": false,
+      "bypass": true,
       "lrSwitch": false,
-      "internalPreheater": false,
-      "rhSensor": false,
+      "internalPreheater": true,
+      "rhSensor": true,
       "vocSensor": false,
       "extOverride": false,
       "haC1": true,
-      "hrC2": false,
+      "hrC2": true,
       "pcTool": false,
-      "apps": true,
+      "apps": false,
       "zigBee": false,
       "dI1Override": false,
-      "dI2Override": false,
-      "unitType": 195
+      "dI2Override": true,
+      "unitType": "HCV400_P2"
     },
     "halLeft": true,
     "halRight": false,
-    "dateTime": "2023-01-27T17:44:40Z",
-    "workTimeHours": 7215,
+    "dateTime": "2023-09-04T20:06:34Z",
+    "workTimeHours": 12495,
     "startExploitation": "2022-04-01T10:31:39Z",
     "currentBLState": "WeekProgram",
-    "outdoorTemperatureC": -1.2696124,
-    "supplyTemperatureC": 15.075243,
-    "extractTemperatureC": 21.727291,
-    "exhaustTemperatureC": 7.226437,
-    "filterRemaningTimeDays": 60,
+    "outdoorTemperatureC": 19.393528,
+    "supplyTemperatureC": 25.784779,
+    "extractTemperatureC": 25.290403,
+    "exhaustTemperatureC": 25.483688,
+    "filterRemaningTimeDays": 209,
     "lastActiveAlarm": "None",
-    "halFan1Rpm": 2169.6309,
-    "halFan2Rpm": 2147.4563
+    "halFan1Rpm": 2082.2507,
+    "halFan2Rpm": 2077.2612,
+    "relativeHumidity": 47,
+    "bypassState": "Opened",
+    "fanSpeedLevel": 3
   }
 }
 ```
@@ -93,22 +96,21 @@ services:
     environment:
       - DanthermUvcSpec__Address=192.168.0.42
       - MqttConnectionOptions__Server=192.168.0.30
+      - MqttConnectionOptions__Port=1883
+      - MqttConnectionOptions__UseTls=false
 ```
 
 ### Configuration
 
-| Json Key                            | Environment Varible                   | Description                         | Example        | Default       |
-| ----------------------------------- | ------------------------------------- | ----------------------------------- | -------------- | ------------- |
-| `DanthermUvcSpec.Address`           | `DanthermUvcSpec__Address`,           | IP of the UVC Controller            | `192.168.1.42` | `null`        |
-| `DanthermUvcSpec.Port`              | `DanthermUvcSpec__Port`,              | Modbus port on the UVC Controller   | `502`          | `502`         |
-| `DanthermUvcSpec.SlaveAddress`      | `DanthermUvcSpec__SlaveAddress`,      | Slave address of the UVC Controller | `1`            | `1`           |
-| `DanthermUvcSpec.PollingIntervalMS` | `DanthermUvcSpec__PollingIntervalMS`, | Polling interval in ms              | `30000`        | `30000` (30s) |
-
-It uses the library [JonasMH/ToMqttNet](https://github.com/JonasMH/ToMqttNet) to MQTT, Home Assistant Discovery and more, so some MQTT related options are inherited from there:
-
-| Json Key                         | Environment Varible                | Description                             | Example          | Default          |
-| -------------------------------- | ---------------------------------- | --------------------------------------- | ---------------- | ---------------- |
-| `MqttConnectionOptions.ClientId` | `MqttConnectionOptions__ClientId`, | MQTT Client ID                          | `danthermtomqtt` | `danthermtomqtt` |
-| `MqttConnectionOptions.NodeId`   | `MqttConnectionOptions__NodeId`,   | Node id, used as prefix for topics      | `dantherm`       | `dantherm`       |
-| `MqttConnectionOptions.Server`   | `MqttConnectionOptions__Server`,   | Server address of the MQTT Server       | `192.168.1.42`   | `mosquitto`      |
-| `MqttConnectionOptions.Port`     | `MqttConnectionOptions__Port`,     | Port to connect to the MQTT Server with | `1883`           | `1883` (10s)     |
+| Json Key                            | Environment Varible                   | Description                             | Example        | Default                                |
+| ----------------------------------- | ------------------------------------- | --------------------------------------- | -------------- | -------------------------------------- |
+| `DanthermUvcSpec.Address`           | `DanthermUvcSpec__Address`,           | IP of the UVC Controller                | `192.168.1.42` | `null`                                 |
+| `DanthermUvcSpec.Port`              | `DanthermUvcSpec__Port`,              | Modbus port on the UVC Controller       | `502`          | `502`                                  |
+| `DanthermUvcSpec.SlaveAddress`      | `DanthermUvcSpec__SlaveAddress`,      | Slave address of the UVC Controller     | `1`            | `1`                                    |
+| `DanthermUvcSpec.PollingIntervalMS` | `DanthermUvcSpec__PollingIntervalMS`, | Polling interval in ms                  | `30000`        | `30000` (30s)                          |
+| `MqttConnectionOptions.Server`      | `MqttConnectionOptions__Server`,      | Server address of the MQTT Server       | `192.168.1.42` | `mosquitto`                            |
+| `MqttConnectionOptions.Port`        | `MqttConnectionOptions__Port`,        | Port to connect to the MQTT Server with | `8883`         | `8883`                                 |
+| `MqttConnectionOptions.UseTls`      | `MqttConnectionOptions__UseTls`,      | Use TLS to connect                      | `true`/`false` | `true`                                 |
+| `MqttConnectionOptions.CaCrt`       | `MqttConnectionOptions__CaCrt`,       | CA Certificate                          | `ca.crt`       | `/data/mosquitto-client-certs/ca.crt`  |
+| `MqttConnectionOptions.ClientCrt`   | `MqttConnectionOptions__ClientCrt`,   | Client Certificate                      | `tls.crt`      | `/data/mosquitto-client-certs/tls.crt` |
+| `MqttConnectionOptions.ClientKey`   | `MqttConnectionOptions__ClientKey`,   | Client Key                              | `tls.key`      | `/data/mosquitto-client-certs/tls.key` |
