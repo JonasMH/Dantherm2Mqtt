@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using FluentModbus;
+namespace Dantherm2Mqtt;
 
 public interface IModbusClient
 {

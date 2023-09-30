@@ -1,21 +1,18 @@
+using Dantherm2Mqtt;
 using MQTTnet.Client;
-using Prometheus;
-using Serilog;
+using OpenTelemetry.Metrics;
 using System.Security.Cryptography.X509Certificates;
 using ToMqttNet;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateSlimBuilder(args);
 var services = builder.Services;
 
 
-builder.Host.UseSerilog((options, loggerConf) =>
+builder.Logging.AddSimpleConsole(options =>
 {
-	loggerConf
-		.MinimumLevel.Debug()
-		.Enrich.FromLogContext()
-		.Enrich.WithThreadId()
-		.WriteTo.Console(outputTemplate: "[{Timestamp:yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz} {Level:u3} {ThreadId} {SourceContext}] {Message:lj}{NewLine}{Exception}")
-		.ReadFrom.Configuration(options.Configuration);
+	options.IncludeScopes = true;
+	options.SingleLine = true;
+	options.TimestampFormat = "HH:mm:ss ";
 });
 
 services.AddHealthChecks();
@@ -36,19 +33,19 @@ services.AddMqttConnection(options =>
 
     if (useTls)
     {
-        var caCrt = new X509Certificate2(mqttConf["CaCrt"]);
-        var clientCrt = X509Certificate2.CreateFromPemFile(mqttConf["ClientCrt"], mqttConf["ClientKey"]);
+        var caCrt = new X509Certificate2(mqttConf["CaCrt"]!);
+        var clientCrt = X509Certificate2.CreateFromPemFile(mqttConf["ClientCrt"]!, mqttConf["ClientKey"]);
 
 
         tcpOptions.TlsOptions = new MqttClientTlsOptions
         {
             UseTls = true,
             SslProtocol = System.Security.Authentication.SslProtocols.Tls12,
-            Certificates = new List<X509Certificate>()
-            {
-                clientCrt, caCrt
-            },
-            CertificateValidationHandler = (certContext) =>
+			ClientCertificatesProvider = new DefaultMqttCertificatesProvider(new List<X509Certificate>()
+			{
+				clientCrt, caCrt
+			}),
+			CertificateValidationHandler = (certContext) =>
             {
                 X509Chain chain = new X509Chain();
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
@@ -71,24 +68,16 @@ services.AddMqttConnection(options =>
     options.ClientOptions.ChannelOptions = tcpOptions;
 });
 
+services.AddOpenTelemetry()
+	.WithMetrics(builder =>
+	{
+		builder.AddPrometheusExporter();
+		builder.AddMeter("DanthermToMqtt");
+		builder.AddMeter("Microsoft.AspNetCore.Hosting",
+						 "Microsoft.AspNetCore.Server.Kestrel");
+	});
 
-services.AddSingleton<CollectorRegistry>(x =>
-{
-	var registry = Metrics.NewCustomRegistry();
-
-	DotNetStats.Register(registry);
-
-	return registry;
-});
-
-services.AddSingleton<MetricFactory>(x =>
-{
-	var factory = Metrics.WithCustomRegistry(x.GetRequiredService<CollectorRegistry>());
-
-	return factory;
-});
-
-services.AddSingleton<IDanthermToMqttMetrics, DanthermToMqttMetrics>();
+services.AddSingleton<DanthermToMqttMetrics>();
 services.AddSingleton<IModbusClient, ModbusClientBinding>();
 services.AddOptions<DanthermUvcSpec>()
 	.BindConfiguration(nameof(DanthermUvcSpec));
@@ -96,6 +85,6 @@ services.AddOptions<DanthermUvcSpec>()
 var app = builder.Build();
 
 app.MapHealthChecks("/health");
-app.MapMetrics(registry: app.Services.GetRequiredService<CollectorRegistry>());
+app.MapPrometheusScrapingEndpoint("/metrics");
 
 app.Run();

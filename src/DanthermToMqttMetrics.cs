@@ -1,44 +1,45 @@
-﻿using Prometheus;
+﻿
+using NodaTime;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+namespace Dantherm2Mqtt;
 
-public class DanthermToMqttMetrics : IDanthermToMqttMetrics
+public class DanthermToMqttMetrics
 {
-	private readonly MetricFactory _metricsFactory;
-	private readonly Gauge _lastActiveAlarm;
-	private readonly Counter _lastPull;
+	private readonly ConcurrentDictionary<ulong, (Instant When, DanthermKind Update)> _lastUpdates = new();
+	private readonly Meter _meter;
 
-	public DanthermToMqttMetrics(MetricFactory metricsFactory)
+	public DanthermToMqttMetrics(IMeterFactory metricsFactory)
 	{
-		_metricsFactory = metricsFactory;
-
-		_lastActiveAlarm = _metricsFactory.CreateGauge("danthermtomqtt_last_active_alarm", "The last active alarm, zero = none, see Dantherm documentation if not zero", new GaugeConfiguration
-		{
-			LabelNames = new string[]
-			{
-				"device_serial"
-			}
-		});
-
-		_lastPull = _metricsFactory.CreateCounter("danthermtomqtt_last_data_pull_time", "The last time data either failed or pulled successfully", new CounterConfiguration
-		{
-			LabelNames = new string[]
-			{
-				"succeeded",
-				"device_serial"
-			}
-		});
+		_meter = metricsFactory.Create("DanthermToMqtt");
 	}
 
 	public void UpdateMetrics(DanthermKind kind)
 	{
-		_lastActiveAlarm
-			.WithLabels(kind.Status.SerialNum.ToString())
-			.Set((int)kind.Status.LastActiveAlarm);
-	}
+		_lastUpdates.AddOrUpdate(kind.Status.SerialNum,
+		(serial) => {
+				var tagList = new TagList()
+				{
+					{"device_serial", serial }
+				};
 
-	public void SetLastDataPull(DanthermKind kind, bool succeeded)
-	{
-		_lastPull
-			.WithLabels(succeeded.ToString(), kind.Status.SerialNum.ToString())
-			.IncToCurrentTimeUtc();
+				_meter.CreateObservableCounter(
+					"danthermtomqtt_last_active_alarm",
+					() => (int)_lastUpdates[serial].Update.Status.LastActiveAlarm,
+					unit: null,
+					description: "The last active alarm, zero = none, see Dantherm documentation if not zero",
+					tagList);
+
+				_meter.CreateObservableGauge(
+					"danthermtomqtt_last_data_pull_timestamp_seconds",
+					() => _lastUpdates[serial].When.ToUnixTimeSeconds(),
+					unit: "seconds",
+					description: "The last time data was pulled successfully",
+					tagList);
+
+				return (SystemClock.Instance.GetCurrentInstant(), kind);
+			},
+			(serial, current) => (SystemClock.Instance.GetCurrentInstant(), kind));
 	}
 }

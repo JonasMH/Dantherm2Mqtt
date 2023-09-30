@@ -1,9 +1,10 @@
 ﻿using System.Net;
 using FluentModbus;
 
+namespace Dantherm2Mqtt;
 public class ModbusClientBinding : IModbusClient
 {
-	private ModbusTcpClient _modbusClient;
+	private readonly ModbusTcpClient _modbusClient;
 
 	public ModbusClientBinding()
 	{

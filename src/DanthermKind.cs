@@ -1,6 +1,6 @@
-﻿
-using NodaTime;
-using System.Net;
+﻿using NodaTime;
+using System.Text.Json.Serialization;
+namespace Dantherm2Mqtt;
 
 
 public class DanthermKind
@@ -30,18 +30,21 @@ public class DanthermUvcStatus
     public Instant DateTime { get; set; }
     public long WorkTimeHours { get; set; }
     public Instant StartExploitation { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter<DanthermUvcModeOfOperation>))]
     public DanthermUvcModeOfOperation CurrentBLState { get; set; }
     public float OutdoorTemperatureC { get; set; }
     public float SupplyTemperatureC { get; set; }
     public float ExtractTemperatureC { get; set; }
     public float ExhaustTemperatureC { get; set; }
     public uint FilterRemaningTimeDays { get; set; }
-    public DanthermUvcAlarm LastActiveAlarm { get; set; }
+	[JsonConverter(typeof(JsonStringEnumConverter<DanthermUvcAlarm>))]
+	public DanthermUvcAlarm LastActiveAlarm { get; set; }
     public float HALFan1Rpm { get; set; }
     public float HALFan2Rpm { get; set; }
     public uint? VolatileOrganicCompounds { get; set; }
     public uint? RelativeHumidity { get; set; }
-    public DanthermUvcBypassState? BypassState { get; set; }
+	[JsonConverter(typeof(JsonStringEnumConverter<DanthermUvcBypassState>))]
+	public DanthermUvcBypassState? BypassState { get; set; }
 	public uint FanSpeedLevel { get; set; }
 }
 
@@ -162,7 +165,7 @@ public class DanthermUvcSystemId
     public bool DI1Override { get; set; }
     public bool DI2Override { get; set; }
 
-    public DanthermUvcUnitType UnitType { get; set; }
+	public DanthermUvcUnitType UnitType { get; set; }
 
     public static DanthermUvcSystemId Parse(byte[] input)
     {

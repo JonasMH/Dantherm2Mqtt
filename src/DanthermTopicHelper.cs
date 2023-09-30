@@ -1,32 +1,25 @@
 ﻿using ToMqttNet;
+namespace Dantherm2Mqtt;
 
-public class DanthermTopicHelper
+public class DanthermTopicHelper(IMqttConnectionService mqtt)
 {
-	private readonly IMqttConnectionService _mqtt;
-
-	public DanthermTopicHelper(IMqttConnectionService mqtt)
-	{
-		_mqtt = mqtt;
-	}
-
 	public string GetStatusTopic(ulong serialNum)
 	{
-		return $"{_mqtt.MqttOptions.NodeId}/status/{serialNum}";
+		return $"{mqtt.MqttOptions.NodeId}/status/{serialNum}";
 	}
-
 
 	public string GetSetTopicRegex(ulong serialNum)
 	{
-		return $"{_mqtt.MqttOptions.NodeId}/write/{serialNum}/+";
+		return $"{mqtt.MqttOptions.NodeId}/write/{serialNum}/+";
 	}
 
 	public string GetSetUnitModeTopic(ulong serialNum)
 	{
-		return $"{_mqtt.MqttOptions.NodeId}/write/{serialNum}/activeMode";
+		return $"{mqtt.MqttOptions.NodeId}/write/{serialNum}/activeMode";
 	}
 
 	public string GetSetFanSpeedLevel(ulong serialNum)
 	{
-		return $"{_mqtt.MqttOptions.NodeId}/write/{serialNum}/fanSpeedLevel";
+		return $"{mqtt.MqttOptions.NodeId}/write/{serialNum}/fanSpeedLevel";
 	}
 }

@@ -1,33 +1,32 @@
 using System.Net;
 using FluentModbus;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using NodaTime;
-using NodaTime.Serialization.JsonNet;
 using Microsoft.Extensions.Options;
 using ToMqttNet;
 using MQTTnet;
-using Newtonsoft.Json.Serialization;
 using System.Linq.Expressions;
 using System.Reflection;
 using MQTTnet.Packets;
 using MQTTnet.Client;
+using System.Text.Json;
+using System.Net.Http.Json;
+namespace Dantherm2Mqtt;
 
 public class DanthermModBusHandler : BackgroundService
 {
 	private readonly ILogger<DanthermModBusHandler> _logger;
-	private readonly IDanthermToMqttMetrics? _metrics;
+	private readonly DanthermToMqttMetrics? _metrics;
 	private readonly IMqttConnectionService _mqtt;
 	private readonly DanthermTopicHelper _topicHelper;
 	private short _addressOffset = -1;
 	private IModbusClient _modbusClient;
 	private DanthermKind _result;
-	private JsonSerializerSettings _jsonSettings;
+	private DanthermMqttJsonContext _jsonContext = DanthermMqttJsonContext.Default;
 
 	public DanthermModBusHandler(
 		ILogger<DanthermModBusHandler> logger,
-		IDanthermToMqttMetrics? metrics,
+		DanthermToMqttMetrics? metrics,
 		IModbusClient modBusClient,
 		IOptions<DanthermUvcSpec> danthermOptions,
 		IMqttConnectionService mqtt,
@@ -42,19 +41,6 @@ public class DanthermModBusHandler : BackgroundService
 		{
 			Spec = danthermOptions.Value
 		};
-
-		_jsonSettings = new JsonSerializerSettings
-		{
-			Formatting = Formatting.Indented,
-			ContractResolver = new DefaultContractResolver
-			{
-				NamingStrategy = new CamelCaseNamingStrategy()
-			},
-			NullValueHandling = NullValueHandling.Ignore,
-		};
-
-		_jsonSettings.Converters.Add(new StringEnumConverter());
-		_jsonSettings.ConfigureForNodaTime(DateTimeZoneProviders.Tzdb);
 	}
 
 	public async Task<byte[]> ReadHoldingRegistersAsync(ushort register, ushort points)
@@ -106,18 +92,17 @@ public class DanthermModBusHandler : BackgroundService
 					await _mqtt.PublishAsync(
 						new MqttApplicationMessageBuilder()
 						.WithTopic(_topicHelper.GetStatusTopic(_result.Status.SerialNum))
-						.WithPayload(JsonConvert.SerializeObject(_result, _jsonSettings))
+						.WithPayload(JsonSerializer.Serialize(_result, DanthermMqttJsonContext.Default.DanthermKind))
 						.Build());
 
 					_metrics?.UpdateMetrics(_result);
-					_metrics?.SetLastDataPull(_result, true);
 
 					// Only publish the discovery document after the first values have been published
 					if(!hasPublishedDiscovery)
 					{
 						hasPublishedDiscovery = true;
 						await SetupSubscriptionsAsync();
-						await PublishDiscoveryDocumentsAsync();
+						await PublishDiscoveryDocumentsAsync(_result);
 					}
 
 					await Task.Delay(TimeSpan.FromMilliseconds(_result.Spec.PollingIntervalMS), stoppingToken);
@@ -125,7 +110,6 @@ public class DanthermModBusHandler : BackgroundService
 
 			} catch(Exception ex)
 			{
-				_metrics?.SetLastDataPull(_result, false);
 				_logger.LogError(ex, "Failed to read from modbus device");
 			}
 
@@ -228,7 +212,7 @@ public class DanthermModBusHandler : BackgroundService
 		}
 	}
 
-	private async Task PublishDiscoveryDocumentsAsync()
+	public async Task PublishDiscoveryDocumentsAsync(DanthermKind data)
 	{
 		var deviceName = "Dantherm HCV400";
 		var availability = new List<MqttDiscoveryAvailablilty>{
@@ -239,21 +223,21 @@ public class DanthermModBusHandler : BackgroundService
 				PayloadNotAvailable = "0"
 			}
 		};
-		var statusTopic = _topicHelper.GetStatusTopic(_result.Status.SerialNum);
+		var statusTopic = _topicHelper.GetStatusTopic(data.Status.SerialNum);
 
 		var device = new MqttDiscoveryDevice
 		{
 			Name = deviceName,
 			Identifiers = new List<string>
 			{
-				_result.Status.SerialNum.ToString()
+				data.Status.SerialNum.ToString()
 			}
 		};
 
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Outdoor Temperature",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_outdoor_temp",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_outdoor_temp",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -264,7 +248,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Supply Temperature",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_supply_temp",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_supply_temp",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -275,7 +259,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Extract Temperature",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_extract_temp",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_extract_temp",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -286,7 +270,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Exhaust Temperature",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_exhaust_temp",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_exhaust_temp",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -297,7 +281,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Fan1 Speed",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan1_rpm",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_fan1_rpm",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -308,7 +292,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Fan2 Speed",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan2_rpm",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_fan2_rpm",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -319,7 +303,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Active Alarm",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_active_alarm",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_active_alarm",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -329,7 +313,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Work Hours",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_work_hours",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_work_hours",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -340,7 +324,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Remaining Filter Days",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_remaning_filter_days",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_remaning_filter_days",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -351,7 +335,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Current State",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_current_state",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_current_state",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -361,7 +345,7 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 		{
 			Name = $"Bypass Active",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_bypass_state",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_bypass_state",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
@@ -371,11 +355,11 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttSelectDiscoveryConfig()
 		{
 			Name = $"Fan Speed Level",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_fan_speed_level",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_fan_speed_level",
 			Availability = availability,
 			Device = device,
 			StateTopic = statusTopic,
-			CommandTopic = _topicHelper.GetSetFanSpeedLevel(_result.Status.SerialNum),
+			CommandTopic = _topicHelper.GetSetFanSpeedLevel(data.Status.SerialNum),
 			ValueTemplate = GetValueTemplate(x => x.FanSpeedLevel),
 			Options = new List<string>
 			{
@@ -390,59 +374,59 @@ public class DanthermModBusHandler : BackgroundService
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
 			Name = $"Start manual bypass",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_start_manual_bypass",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_start_manual_bypass",
 			Availability = availability,
 			Device = device,
-			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(data.Status.SerialNum),
 			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.StartManualBypass)
 		});
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
 			Name = $"End manual bypass",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_end_manual_bypass",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_end_manual_bypass",
 			Availability = availability,
 			Device = device,
-			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(data.Status.SerialNum),
 			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.EndManualBypass)
 		});
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
 			Name = $"Demand Mode",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_demand_mode",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_demand_mode",
 			Availability = availability,
 			Device = device,
-			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(data.Status.SerialNum),
 			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.Demand)
 		});
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
 			Name = $"Manual Mode",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_manual_mode",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_manual_mode",
 			Availability = availability,
 			Device = device,
-			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(data.Status.SerialNum),
 			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.Manual)
 		});
 
 		await _mqtt.PublishDiscoveryDocument(new MqttButtonDiscoveryConfig()
 		{
 			Name = $"Week Program Mode",
-			UniqueId = $"dantherm_{_result.Status.SerialNum}_week_program_mode",
+			UniqueId = $"dantherm_{data.Status.SerialNum}_week_program_mode",
 			Availability = availability,
 			Device = device,
-			CommandTopic = _topicHelper.GetSetUnitModeTopic(_result.Status.SerialNum),
+			CommandTopic = _topicHelper.GetSetUnitModeTopic(data.Status.SerialNum),
 			CommandTemplate = Enum.GetName(DanthermUvcSetModeOfOperation.WeekProgram)
 		});
 
-		if (_result.Status.SystemId.RHSensor)
+		if (data.Status.SystemId.RHSensor)
 		{
 			await _mqtt.PublishDiscoveryDocument(new MqttSensorDiscoveryConfig()
 			{
 				Name = $"Relative Humidity",
-				UniqueId = $"dantherm_{_result.Status.SerialNum}_relative_humidity",
+				UniqueId = $"dantherm_{data.Status.SerialNum}_relative_humidity",
 				Availability = availability,
 				Device = device,
 				StateTopic = statusTopic,
@@ -469,9 +453,9 @@ public class DanthermModBusHandler : BackgroundService
 				selector.ToString()));
 		}
 
-		var namingStrat = ((DefaultContractResolver)_jsonSettings.ContractResolver!).NamingStrategy!;
-		var statusKey = namingStrat.GetPropertyName(nameof(DanthermKind.Status), false);
-		return $"value_json.{statusKey}.{namingStrat.GetPropertyName(propInfo.Name, false)}";
+		var converter = _jsonContext.Options.PropertyNamingPolicy!;
+		var statusKey = converter.ConvertName(nameof(DanthermKind.Status));
+		return $"value_json.{statusKey}.{converter.ConvertName(propInfo.Name)}";
 	}
 
 	private string GetValueTemplate<T>(Expression<Func<DanthermUvcStatus, T>> selector)
