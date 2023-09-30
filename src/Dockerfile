@@ -5,10 +5,9 @@ USER app
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+RUN apk add --upgrade --no-cache build-base clang zlib-dev
 WORKDIR /src
-COPY ["Directory.Build.props", "."]
 COPY ["src/Dantherm2Mqtt.csproj", "src/"]
 RUN dotnet restore  -r linux-musl-x64 "src/Dantherm2Mqtt.csproj"
 COPY . .
