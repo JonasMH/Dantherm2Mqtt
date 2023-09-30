@@ -26,8 +26,8 @@ jobs:
       - name: Login to Docker Hub
         run: docker login -u ${{secrets.DOCKER_HUB_REGISTRY_USER}} -p ${{secrets.DOCKER_HUB_REGISTRY_PASSWORD}}
       - name: Build image
-        run: docker build --pull -f ./src/Dockerfile -t jonasmh/dantherm2mqtt:${GITHUB_REF#refs/*/v} -t jonasmh/dantherm2mqtt:latest .
+        run: docker build --pull -f ./src/Dockerfile -t jonasmh/dantherm2mqtt:${GITHUB_REF#refs/*} -t jonasmh/dantherm2mqtt:latest .
       - name: Push image
         run: |-
-          docker push jonasmh/dantherm2mqtt:${GITHUB_REF#refs/*/v};
+          docker push jonasmh/dantherm2mqtt:${GITHUB_REF#refs/*};
           docker push jonasmh/dantherm2mqtt:latest;
