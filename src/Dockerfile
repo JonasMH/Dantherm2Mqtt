@@ -10,7 +10,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Directory.Build.props", "."]
 COPY ["src/Dantherm2Mqtt.csproj", "src/"]
-RUN dotnet restore "src/Dantherm2Mqtt.csproj"
+RUN dotnet restore  -r linux-musl-x64 "src/Dantherm2Mqtt.csproj"
 COPY . .
 WORKDIR "/src/src"
 RUN dotnet publish "Dantherm2Mqtt.csproj" --no-restore -c Release -o /app
