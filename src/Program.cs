@@ -79,8 +79,7 @@ services.AddOpenTelemetry()
 
 services.AddSingleton<DanthermToMqttMetrics>();
 services.AddSingleton<IModbusClient, ModbusClientBinding>();
-services.AddOptions<DanthermUvcSpec>()
-	.BindConfiguration(nameof(DanthermUvcSpec));
+services.AddOptions<DanthermUvcSpec>().BindConfiguration(nameof(DanthermUvcSpec));
 
 var app = builder.Build();
 
