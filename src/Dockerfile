@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 RUN apk add --upgrade --no-cache build-base clang zlib-dev
 WORKDIR /src
 COPY ["src/Dantherm2Mqtt.csproj", "src/"]
-RUN dotnet restore  -r linux-musl-x64 "src/Dantherm2Mqtt.csproj"
+RUN dotnet restore -r linux-musl-x64 "src/Dantherm2Mqtt.csproj"
 COPY . .
 WORKDIR "/src/src"
 RUN dotnet publish "Dantherm2Mqtt.csproj" --no-restore -c Release -o /app

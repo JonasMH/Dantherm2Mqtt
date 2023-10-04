@@ -6,12 +6,13 @@
 		<LangVersion>preview</LangVersion>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<PublishAot>true</PublishAot>
+		<InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FluentModbus" Version="5.0.3" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
     <PackageReference Include="NodaTime" Version="3.1.9" />
-    <PackageReference Include="ToMqttNet" Version="2.0.1" />
+    <PackageReference Include="ToMqttNet" Version="2.1.0" />
 		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.6.0-rc.1" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.6.0" />
   </ItemGroup>
