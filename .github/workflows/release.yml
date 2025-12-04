@@ -19,7 +19,6 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    container: alpine:3.15
     needs: [test]
     steps:
       - name: Check out the repo

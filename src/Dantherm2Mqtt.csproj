@@ -6,6 +6,7 @@
 		<PublishAot>true</PublishAot>
 		<PublishTrimmed>true</PublishTrimmed>
 		<InvariantGlobalization>true</InvariantGlobalization>
+		<StaticallyLinked>true</StaticallyLinked>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="FluentModbus" Version="5.3.2" />
