@@ -9,17 +9,17 @@ public class MqttConnectionServiceMock : IMqttConnectionService
 {
     public MqttConnectionOptions MqttOptions => new MqttConnectionOptions();
 
-    public List<MqttApplicationMessage> PublishedMessages { get; } = new ();
+    public List<MqttApplicationMessage> PublishedMessages { get; } = new();
 
-    public event EventHandler<MqttApplicationMessageReceivedEventArgs>? OnApplicationMessageReceived;
-    public event EventHandler<EventArgs>? OnConnect;
-    public event EventHandler<EventArgs>? OnDisconnect;
+    public event Func<MqttApplicationMessageReceivedEventArgs, Task>? OnApplicationMessageReceivedAsync;
+    public event Func<MqttClientConnectedEventArgs, Task>? OnConnectAsync;
+    public event Func<MqttClientDisconnectedEventArgs, Task>? OnDisconnectAsync;
 
     public Task PublishAsync(MqttApplicationMessage applicationMessages)
     {
         PublishedMessages.Add(applicationMessages);
         return Task.CompletedTask;
-	}
+    }
 
     public Task SubscribeAsync(params MqttTopicFilter[] topics)
     {

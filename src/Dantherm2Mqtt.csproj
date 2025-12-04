@@ -1,19 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-  <PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<LangVersion>preview</LangVersion>
-		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<PublishAot>true</PublishAot>
+		<PublishTrimmed>true</PublishTrimmed>
 		<InvariantGlobalization>true</InvariantGlobalization>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="FluentModbus" Version="5.0.3" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
-    <PackageReference Include="NodaTime" Version="3.1.9" />
-    <PackageReference Include="ToMqttNet" Version="2.1.0" />
-		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.6.0-rc.1" />
-		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.6.0" />
-  </ItemGroup>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="FluentModbus" Version="5.3.2" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets"
+			Version="1.19.5" />
+		<PackageReference Include="NodaTime" Version="3.2.2" />
+		<PackageReference Include="ToMqttNet" Version="6.0.1" />
+		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore"
+			Version="1.14.0-beta.1" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
+	</ItemGroup>
 </Project>

@@ -7,10 +7,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/dotnet/sdk:8.0-preview
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.100"
       - name: Run tests
         run: dotnet test --blame-hang-timeout 2m $(find *.sln -print -quit)
 
@@ -20,7 +23,7 @@ jobs:
     needs: [test]
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Install deps
         run: apk update && apk add --no-cache docker-cli openrc git
       - name: Login to Docker Hub

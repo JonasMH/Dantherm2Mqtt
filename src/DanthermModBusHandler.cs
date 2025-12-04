@@ -10,7 +10,7 @@ using System.Reflection;
 using MQTTnet.Packets;
 using MQTTnet.Client;
 using System.Text.Json;
-using System.Net.Http.Json;
+using HomeAssistantDiscoveryNet;
 namespace Dantherm2Mqtt;
 
 public class DanthermModBusHandler : BackgroundService
@@ -52,7 +52,7 @@ public class DanthermModBusHandler : BackgroundService
 		for (int i = 0; i < data.Length; i += 2)
 		{
 			result[i] = data[i + 1];
-			result[i+1] = data[i];
+			result[i + 1] = data[i];
 		}
 
 
@@ -98,7 +98,7 @@ public class DanthermModBusHandler : BackgroundService
 					_metrics?.UpdateMetrics(_result);
 
 					// Only publish the discovery document after the first values have been published
-					if(!hasPublishedDiscovery)
+					if (!hasPublishedDiscovery)
 					{
 						hasPublishedDiscovery = true;
 						await SetupSubscriptionsAsync();
@@ -108,7 +108,8 @@ public class DanthermModBusHandler : BackgroundService
 					await Task.Delay(TimeSpan.FromMilliseconds(_result.Spec.PollingIntervalMS), stoppingToken);
 				}
 
-			} catch(Exception ex)
+			}
+			catch (Exception ex)
 			{
 				_logger.LogError(ex, "Failed to read from modbus device");
 			}
@@ -124,10 +125,10 @@ public class DanthermModBusHandler : BackgroundService
 			Topic = _topicHelper.GetSetTopicRegex(_result.Status.SerialNum)
 		});
 
-		_mqtt.OnApplicationMessageReceived += async (sender, e) => await HandleMessageAsync(sender, e);
+		_mqtt.OnApplicationMessageReceivedAsync += HandleMessageAsync;
 	}
 
-	private async Task HandleMessageAsync(object? sender, MqttApplicationMessageReceivedEventArgs evnt)
+	private async Task HandleMessageAsync(MqttApplicationMessageReceivedEventArgs evnt)
 	{
 		try
 		{
@@ -144,14 +145,15 @@ public class DanthermModBusHandler : BackgroundService
 				_logger.LogInformation("Received set fan speed level command with payload {payload}", payload);
 				var speedLevel = int.Parse(payload);
 
-				if(speedLevel < 0 || speedLevel > 4)
+				if (speedLevel < 0 || speedLevel > 4)
 				{
 					throw new DanthermException("Fan Speed Level must be Min: 0, Max: 4, was " + speedLevel);
 				}
 
 				await WriteHoldingRegistersAsync(325, BitConverter.GetBytes((uint)speedLevel));
 			}
-		} catch (Exception e)
+		}
+		catch (Exception e)
 		{
 			_logger.LogError(e, "Failed to handle message to topic {topic} with payload: {payload}", evnt.ApplicationMessage.Topic, evnt.ApplicationMessage.ConvertPayloadToString());
 		}
@@ -201,12 +203,12 @@ public class DanthermModBusHandler : BackgroundService
 			_result.Status.VolatileOrganicCompounds = BitConverter.ToUInt32(await ReadHoldingRegistersAsync(431, 2));
 		}
 
-		if(_result.Status.SystemId.RHSensor)
+		if (_result.Status.SystemId.RHSensor)
 		{
 			_result.Status.RelativeHumidity = BitConverter.ToUInt32(await ReadHoldingRegistersAsync(197, 2));
 		}
 
-		if(_result.Status.SystemId.Bypass)
+		if (_result.Status.SystemId.Bypass)
 		{
 			_result.Status.BypassState = (DanthermUvcBypassState)BitConverter.ToUInt32(await ReadHoldingRegistersAsync(199, 2));
 		}

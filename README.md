@@ -95,9 +95,9 @@ services:
     image: jonasmh/dantherm2mqtt:latest
     environment:
       - DanthermUvcSpec__Address=192.168.0.42
-      - MqttConnectionOptions__Server=192.168.0.30
-      - MqttConnectionOptions__Port=1883
-      - MqttConnectionOptions__UseTls=false
+      - MqttConnection__Server=192.168.0.30
+      - MqttConnection__Port=1883
+      - MqttConnection__UseTls=false
 ```
 
 ### Configuration
@@ -108,9 +108,9 @@ services:
 | `DanthermUvcSpec.Port`              | `DanthermUvcSpec__Port`,              | Modbus port on the UVC Controller       | `502`          | `502`                                  |
 | `DanthermUvcSpec.SlaveAddress`      | `DanthermUvcSpec__SlaveAddress`,      | Slave address of the UVC Controller     | `1`            | `1`                                    |
 | `DanthermUvcSpec.PollingIntervalMS` | `DanthermUvcSpec__PollingIntervalMS`, | Polling interval in ms                  | `30000`        | `30000` (30s)                          |
-| `MqttConnectionOptions.Server`      | `MqttConnectionOptions__Server`,      | Server address of the MQTT Server       | `192.168.1.42` | `mosquitto`                            |
-| `MqttConnectionOptions.Port`        | `MqttConnectionOptions__Port`,        | Port to connect to the MQTT Server with | `8883`         | `8883`                                 |
-| `MqttConnectionOptions.UseTls`      | `MqttConnectionOptions__UseTls`,      | Use TLS to connect                      | `true`/`false` | `true`                                 |
-| `MqttConnectionOptions.CaCrt`       | `MqttConnectionOptions__CaCrt`,       | CA Certificate                          | `ca.crt`       | `/data/mosquitto-client-certs/ca.crt`  |
-| `MqttConnectionOptions.ClientCrt`   | `MqttConnectionOptions__ClientCrt`,   | Client Certificate                      | `tls.crt`      | `/data/mosquitto-client-certs/tls.crt` |
-| `MqttConnectionOptions.ClientKey`   | `MqttConnectionOptions__ClientKey`,   | Client Key                              | `tls.key`      | `/data/mosquitto-client-certs/tls.key` |
+| `MqttConnection.Server`             | `MqttConnection__Server`,             | Server address of the MQTT Server       | `192.168.1.42` | `mosquitto`                            |
+| `MqttConnection.Port`               | `MqttConnection__Port`,               | Port to connect to the MQTT Server with | `8883`         | `8883`                                 |
+| `MqttConnection.UseTls`             | `MqttConnection__UseTls`,             | Use TLS to connect                      | `true`/`false` | `true`                                 |
+| `MqttConnection.CaCrt`              | `MqttConnection__CaCrt`,              | CA Certificate                          | `ca.crt`       | `/data/mosquitto-client-certs/ca.crt`  |
+| `MqttConnection.ClientCrt`          | `MqttConnection__ClientCrt`,          | Client Certificate                      | `tls.crt`      | `/data/mosquitto-client-certs/tls.crt` |
+| `MqttConnection.ClientKey`          | `MqttConnection__ClientKey`,          | Client Key                              | `tls.key`      | `/data/mosquitto-client-certs/tls.key` |

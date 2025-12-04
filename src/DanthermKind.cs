@@ -37,15 +37,15 @@ public class DanthermUvcStatus
     public float ExtractTemperatureC { get; set; }
     public float ExhaustTemperatureC { get; set; }
     public uint FilterRemaningTimeDays { get; set; }
-	[JsonConverter(typeof(JsonStringEnumConverter<DanthermUvcAlarm>))]
-	public DanthermUvcAlarm LastActiveAlarm { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter<DanthermUvcAlarm>))]
+    public DanthermUvcAlarm LastActiveAlarm { get; set; }
     public float HALFan1Rpm { get; set; }
     public float HALFan2Rpm { get; set; }
     public uint? VolatileOrganicCompounds { get; set; }
     public uint? RelativeHumidity { get; set; }
-	[JsonConverter(typeof(JsonStringEnumConverter<DanthermUvcBypassState>))]
-	public DanthermUvcBypassState? BypassState { get; set; }
-	public uint FanSpeedLevel { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter<DanthermUvcBypassState>))]
+    public DanthermUvcBypassState? BypassState { get; set; }
+    public uint FanSpeedLevel { get; set; }
 }
 
 public enum DanthermUvcBypassState
@@ -112,8 +112,8 @@ public enum DanthermUvcSetModeOfOperation
     StartSummer = 0x0800,
     EndSummer = 0x8800,
 
-	StartManualBypass = 0x0080,
-	EndManualBypass = 0x8080,
+    StartManualBypass = 0x0080,
+    EndManualBypass = 0x8080,
 }
 
 public class DanthermUvcFwVersion
@@ -133,19 +133,19 @@ public class DanthermUvcFwVersion
 
 public class DanthermException : Exception
 {
-	public DanthermException()
-	{
-	}
+    public DanthermException()
+    {
+    }
 
-	public DanthermException(string message)
-		: base(message)
-	{
-	}
+    public DanthermException(string message)
+        : base(message)
+    {
+    }
 
-	public DanthermException(string message, Exception inner)
-		: base(message, inner)
-	{
-	}
+    public DanthermException(string message, Exception inner)
+        : base(message, inner)
+    {
+    }
 }
 public class DanthermUvcSystemId
 {
@@ -165,33 +165,34 @@ public class DanthermUvcSystemId
     public bool DI1Override { get; set; }
     public bool DI2Override { get; set; }
 
-	public DanthermUvcUnitType UnitType { get; set; }
+    public DanthermUvcUnitType UnitType { get; set; }
 
     public static DanthermUvcSystemId Parse(byte[] input)
     {
         var result = new DanthermUvcSystemId();
         try
-		{
-			var components = (input[0] << 8) + input[1];
+        {
+            var components = (input[0] << 8) + input[1];
 
-			result.FP1 = ((components >> 0) & 0x01) == 1;
-			result.Week = ((components >> 1) & 0x01) == 1;
-			result.Bypass = ((components >> 2) & 0x01) == 1;
-			result.LRSwitch = ((components >> 3) & 0x01) == 1;
-			result.InternalPreheater = ((components >> 4) & 0x01) == 1;
-			result.RHSensor = ((components >> 5) & 0x01) == 1;
-			result.VOCSensor = ((components >> 6) & 0x01) == 1;
-			result.ExtOverride = ((components >> 7) & 0x01) == 1;
-			result.HAC1 = ((components >> 8) & 0x01) == 1;
-			result.HRC2 = ((components >> 9) & 0x01) == 1;
-			result.PCTool = ((components >> 10) & 0x01) == 1;
-			result.Apps = ((components >> 11) & 0x01) == 1;
-			result.ZigBee = ((components >> 12) & 0x01) == 1;
-			result.DI1Override = ((components >> 13) & 0x01) == 1;
-			result.DI2Override = ((components >> 14) & 0x01) == 1;
+            result.FP1 = ((components >> 0) & 0x01) == 1;
+            result.Week = ((components >> 1) & 0x01) == 1;
+            result.Bypass = ((components >> 2) & 0x01) == 1;
+            result.LRSwitch = ((components >> 3) & 0x01) == 1;
+            result.InternalPreheater = ((components >> 4) & 0x01) == 1;
+            result.RHSensor = ((components >> 5) & 0x01) == 1;
+            result.VOCSensor = ((components >> 6) & 0x01) == 1;
+            result.ExtOverride = ((components >> 7) & 0x01) == 1;
+            result.HAC1 = ((components >> 8) & 0x01) == 1;
+            result.HRC2 = ((components >> 9) & 0x01) == 1;
+            result.PCTool = ((components >> 10) & 0x01) == 1;
+            result.Apps = ((components >> 11) & 0x01) == 1;
+            result.ZigBee = ((components >> 12) & 0x01) == 1;
+            result.DI1Override = ((components >> 13) & 0x01) == 1;
+            result.DI2Override = ((components >> 14) & 0x01) == 1;
 
-			result.UnitType = (DanthermUvcUnitType)input[3];
-		} catch (Exception e)
+            result.UnitType = (DanthermUvcUnitType)input[3];
+        }
+        catch (Exception e)
         {
             throw new DanthermException($"Failed to parse DanthermUvcSystemId Data:{Convert.ToHexString(input)}", e);
         }
